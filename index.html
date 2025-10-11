@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>
+		야옹아밥먹자
+	</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+	<style type=text/css>
+		@font-face {
+		    font-family: 'DosSammul';
+		    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/DOSSaemmul.woff') format('woff');
+		    font-weight: normal;
+		    font-display: swap;
+		}
+		html{font-size: 2rem;scroll-behavior: smooth;}
+		body,h1,h2,p,ol,ul{margin:0;padding:0;}
+		h1{font-family: "Jersey 10", sans-serif;font-weight: 400;font-style: normal; font-size: 4rem; text-align: center;padding: 200px 0px 100px 0px;text-shadow: 7px 7px 0 white,-7px -7px 0 white, 7px -7px 0 white,-7px 7px 0 white; filter: drop-shadow(5px 5px 0 #73564b);z-index: 999;position:relative;}
+		.wrap {width:1500px;margin:auto;align-items: center;}
+		.bg {background: url(bg.jpg) no-repeat center center fixed;background-size: cover;overflow-x:hidden;}
+		 #overlay {
+		    display: none;
+		    position: fixed;
+		    top: 0;
+		    left: 0;
+		    width: 100%;
+		    height: 100%;
+		    background: rgba(0,0,0,0.6);
+		    z-index: 999;
+		  }
+		#rulePopup {
+			display: none;
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 620px;
+			background: white;
+			border: 5px solid black;
+			box-shadow: 6px 6px 0 #333;
+			padding: 50px 30px;
+			font-family: 'DosSammul';line-height: 1.3rem;
+			font-size: 0.7rem;
+			color: black;
+			z-index: 1000;
+		}
+		#rulePopup h2 {
+			text-align: center;
+			margin-bottom: 60px;font-size: 1.8rem;
+		}
+		#rulePopup ul {
+			text-align: left;
+			padding-left: 20px;
+		}
+		#rulePopup button {
+			display: block;
+			margin: 40px auto 0 auto;
+			padding: 15px 15px;
+			border: 3px solid black;
+			background: white;
+			font-family: 'DosSammul';font-size: 0.5rem;
+			cursor: pointer;filter:drop-shadow(3px 3px 0 #555);;
+		}
+		#rulePopup button:hover {
+			background: black;
+			color: white;
+		}
+		#gameUI {display:none;}
+	    #timer {
+	      position:absolute;top:40px;right:40px;
+	      font-family:"Jersey 10",sans-serif;font-size:2rem;
+	      text-shadow:3px 3px 0 white,-3px -3px 0 white,3px -3px 0 white,-3px 3px 0 white;
+	    }
+	    #hearts {
+	      position:absolute;top:50px;left:40px;
+	    }
+	    #hearts img {width:60px;margin-right:5px;}
+	    #cat {position:absolute;bottom:100px;left:50%;transform:translateX(-50%);width:200px;}
+	    .item {
+	      position:absolute;top:-50px;width:60px;z-index: 99}
+	</style>
+</head>
+<body class="bg">
+	<h1 id="title">
+		Feed the Cat!
+	</h1>
+	<div style="text-align: center;">
+		<img src="standingcat2.jpg" id="startCat" style="width: 500px;cursor: pointer;" onclick="showRules()">
+	</div>
+	<div id="overlay"></div>
+	<div id="rulePopup">
+		<h2>!Rule!</h2>
+		<ul>
+			<li>방향키(←, →)로 야옹이를 조작할 수 있다.</li>
+			<li>떨어지는 생선을 먹으면 점수를 얻는다.</li>
+			<li>그러나 플라스틱 병이나 쓰레기는 먹으면 하트가 깎임!</li>
+			<li>우측 상단 타이머가 끝나기 전까지 100점을 넘기면 성공~</li>
+		</ul>
+		<button onclick="startGame()">> 게임 시작하기 <</button>
+	</div>
+	<div id="gameUI">
+	    <div id="timer">TIME 30</div>
+	    <div id="hearts">
+	      <img src="heart.png"><img src="heart.png"><img src="heart.png">
+	    </div>
+	    <img src="cat.jpg" id="cat">
+	</div>
+
+	<script>
+    let time=30, timerInterval, spawnInterval, score=0, lives=3;
+    const fishList=["fish_o.png","fish_w.png","fish_g.png"];
+    const obstacleList=["bottle.png","obstacle.png","rock.png","trash.png","headphone.png","clock.png","chair.png","plastic.png"];
+
+    function showRules(){
+      document.getElementById("overlay").style.display="block";
+      document.getElementById("rulePopup").style.display="block";
+    }
+
+    function startGame(){
+      score=0; lives=3; time=30;
+      document.getElementById("overlay").style.display="none";
+      document.getElementById("rulePopup").style.display="none";
+      const title=document.getElementById("title");
+      title.style.fontSize="2rem"; title.style.transform="translateY(-50px)";
+      document.getElementById("startCat").style.display="none";
+      document.getElementById("gameUI").style.display="block";
+      document.getElementById("hearts").innerHTML='<img src="heart.png"><img src="heart.png"><img src="heart.png">';
+      const cat = document.getElementById("cat");
+	  cat.style.left = "50%";
+	  cat.style.transform = "translateX(-50%)";
+
+      document.getElementById("timer").innerText="TIME "+time;
+      timerInterval=setInterval(()=>{
+        time--;
+        if(time<10) document.getElementById("timer").innerText="TIME 0"+time;
+        else document.getElementById("timer").innerText="TIME "+time;
+        if(time<=0){endGame();}
+      },1000);
+
+      spawnInterval=setInterval(spawnItem,1000);
+
+      document.addEventListener("keydown",moveCat);
+    }
+
+    function moveCat(e){
+      const cat=document.getElementById("cat");
+      let left=cat.offsetLeft;
+      const step=40;
+      if(e.key==="ArrowLeft"){
+        if(left-step>=0){
+          cat.style.left=(left-step)+"px";
+          cat.style.transform="scaleX(-1)";
+        }
+      }
+      if(e.key==="ArrowRight"){
+        if(left+step+cat.offsetWidth<=window.innerWidth){
+          cat.style.left=(left+step)+"px";
+          cat.style.transform="scaleX(1)";
+        }
+      }
+    }
+
+    function spawnItem(){
+      const item=document.createElement("img");
+      let isFish=Math.random()<0.5;
+      item.src=isFish? fishList[Math.floor(Math.random()*fishList.length)] : obstacleList[Math.floor(Math.random()*obstacleList.length)];
+      item.className="item";
+      item.style.left=Math.floor(Math.random()*(window.innerWidth-80))+"px";
+      document.body.appendChild(item);
+
+      let fallSpeed=Math.random()*5+5; // 랜덤 속도 (5~10)
+      let fall=setInterval(()=>{
+        item.style.top=(item.offsetTop+fallSpeed)+"px";
+        if(checkCollision(item)){ 
+          if(isFish){score+=10;}
+          else {loseHeart();}
+          item.remove();clearInterval(fall);
+        }
+        if(item.offsetTop>window.innerHeight){item.remove();clearInterval(fall);}
+      },50);
+    }
+
+    function checkCollision(item){
+      const cat=document.getElementById("cat").getBoundingClientRect();
+      const obj=item.getBoundingClientRect();
+      return !(cat.right<obj.left||cat.left>obj.right||cat.bottom<obj.top||cat.top>obj.bottom);
+    }
+
+    function loseHeart(){
+      const hearts=document.querySelectorAll("#hearts img");
+      if(hearts[lives-1]) hearts[lives-1].remove();
+      lives--;
+      if(lives<=0) endGame();
+    }
+
+    function endGame(){
+      clearInterval(timerInterval);
+      clearInterval(spawnInterval);
+      document.querySelectorAll(".item").forEach(el=>el.remove());
+      document.getElementById("overlay").style.display="block";
+      const popup=document.getElementById("rulePopup");
+      popup.style.display="block";
+      if(score>=100 && lives>0){
+        popup.innerHTML=`<h2>GAME CLEAR!</h2><p style="font-size:1.2rem;text-align:center;">내 점수: ${score}점</p>
+        <button onclick="startGame()">> 다시 하기 <</button>`;
+      } else {
+        popup.innerHTML=`<h2>GAME OVER :(</h2><p style="font-size:1.2rem;text-align:center;">내 점수: ${score}점</p>
+        <button onclick="startGame()">> 다시 하기 <</button>`;
+      }
+    }
+  </script>
+
+
+</body>
+</html>
