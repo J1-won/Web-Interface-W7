@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>야옹게임천국</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+  <style>
+    @font-face{
+      font-family:'DosSammul';
+      src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/DOSSaemmul.woff') format('woff');
+      font-weight:normal;font-display:swap;
+    }
+    html{font-size:1rem;scroll-behavior:smooth;}
+    body,h1,h2,h3,p,ol,ul{margin:0;padding:0;}
+    :root{
+      --px-border:#333;
+      --px-shadow:#666;
+      --px-white:#fff;
+      --brand:#73564b;
+      --tag:#ffda6b;
+    }
+    body{
+      margin:0;
+      background:url('beach.png') center/cover no-repeat fixed;
+      image-rendering:pixelated;
+      overflow-x:hidden;
+      color:#222;
+    }
+
+    .hero{
+      position:relative;
+      text-align:center;
+      padding:100px 0px;
+    }
+    .hero__title{
+      font-family:"Jersey 10",sans-serif;font-size:7rem;
+      font-weight:400;padding:80px 0px 40px 0px;color:black;line-height: 6rem;
+      text-shadow:7px 7px 0 var(--px-white),-7px -7px 0 var(--px-white),
+                   7px -7px 0 var(--px-white),-7px 7px 0 var(--px-white);
+      filter:drop-shadow(5px 5px 0 var(--brand));
+    }
+    .hero__sub{
+      font-family:'DosSammul';
+      font-size:2rem;
+      text-shadow:2px 2px 0 var(--px-white),-2px -2px 0 var(--px-white),
+                  2px -2px 0 var(--px-white),-2px 2px 0 var(--px-white);
+      filter:drop-shadow(2px 2px 0 var(--brand));
+      margin:0 auto 1.5rem;
+      max-width:900px;
+    }
+
+    /* Grid */
+    .grid{
+      width:min(980px,92vw);
+      margin:0 auto 5rem;
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:30px;
+    }
+
+    /* Card */
+    .card{
+      position:relative;
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      background:rgba(255,255,255,.9);
+      border:4px solid var(--px-border);
+      box-shadow:6px 6px 0 var(--px-shadow);
+      image-rendering:pixelated;
+      transform:translateZ(0); /* GPU hint */
+      transition:transform .1s ease, box-shadow .1s ease;
+    }
+    .card:hover{ transform:translateY(-3px) scale(1.03); box-shadow:8px 10px 0 var(--px-shadow); }
+
+    .card__media{
+      position:relative; aspect-ratio:16/9; overflow:hidden; background:#ddd;
+      border-bottom:4px solid var(--px-border);
+    }
+    .thumb, .preview{
+      position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+      image-rendering:pixelated; transition:opacity .2s ease;
+    }
+    .preview{ opacity:0; }
+    .card:hover .thumb{ opacity:0; }
+    .card:hover .preview{ opacity:1; }
+
+    .card__body{ padding:16px 17px 22px 17px; }
+    .card__title{
+      font-family:"Jersey 10",sans-serif;font-weight:400;font-size:2.3rem; margin:0 0 6px;
+      text-shadow:2px 2px 0 var(--px-white),-2px -2px 0 var(--px-white),
+                   2px -2px 0 var(--px-white),-2px 2px 0 var(--px-white);
+    }
+    .card__desc{
+      font-family:'DosSammul',monospace; font-size:1rem; margin:0 0 30px; line-height:1.25rem;
+    }
+
+    .meta{
+      display:flex; gap:14px; flex-wrap:wrap;margin-top: 20px;
+      font-family:'DosSammul',monospace; font-size:.8rem;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;font-size:1rem;
+      background:var(--tag); border:3px solid var(--px-border);
+      box-shadow:4px 4px 0 var(--px-shadow);
+      padding:6px 10px;
+    }
+    .badge__dot{ font-size:1rem; line-height:1; }
+    .badge--easy .badge__dot{ color:#3bb273 }
+    .badge--normal .badge__dot{ color:#f39c12 }
+    .badge--hard .badge__dot{ color:#e74c3c }
+
+    /* Footer */
+    .footer{
+      text-align:center; padding:24px 12px 40px;
+      font-family:'DosSammul',monospace; font-size:1rem;
+      text-shadow:1px 1px 0 var(--px-white);
+    }
+
+    /* Reduced motion: keep image, no auto swap */
+    @media (prefers-reduced-motion: reduce){
+      .card:hover .thumb{ opacity:1 }
+      .card:hover .preview{ opacity:0 }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1 class="hero__title">Welcome to<br> Yaong Game Heaven</h1>
+    <p class="hero__sub">야옹게임천국에 오신 것을 환영합니다!</p>
+  </header>
+
+  <main class="grid">
+    <!-- Bathe the Cat -->
+    <a class="card" href="bathe.html">
+      <div class="card__media">
+        <img class="thumb" src="bathe_thumb.png" alt="Bathe the Cat 썸네일" />
+        <!-- mp4 또는 gif 아무거나 가능 -->
+        <video class="preview" src="bathe_preview.mp4" muted loop playsinline></video>
+      </div>
+      <div class="card__body">
+        <h3 class="card__title">Bathe the Cat!</h3>
+        <p class="card__desc">야옹이를 손으로 직접 씻겨주세요~</p>
+        <div class="meta">
+          <span class="badge badge--normal"><span class="badge__dot">◆</span> 난이도 보통</span>
+          <span class="badge"><span class="badge__dot">⏱</span> 40s</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Feed the Cat -->
+    <a class="card" href="feed.html">
+      <div class="card__media">
+        <img class="thumb" src="feed_thumb.png" alt="Feed the Cat 썸네일" />
+        <video class="preview" src="feed_preview.mp4" muted loop playsinline></video>
+      </div>
+      <div class="card__body">
+        <h3 class="card__title">Feed the Cat!</h3>
+        <p class="card__desc">생선을 낚아채고, 쓰레기는 피해요!</p>
+        <div class="meta">
+          <span class="badge badge--easy"><span class="badge__dot">◆</span> 난이도 쉬움</span>
+          <span class="badge"><span class="badge__dot">⏱</span> 30s</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Laser Chase -->
+    <a class="card" href="jump.html">
+      <div class="card__media">
+        <img class="thumb" src="jump_thumb.png" alt="Jump 썸네일" />
+        <video class="preview" src="jump_preview.mp4" muted loop playsinline></video>
+      </div>
+      <div class="card__body">
+        <h3 class="card__title">Jumping Cat!</h3>
+        <p class="card__desc">구름을 밟아서 더 높이 올라가볼까</p>
+        <div class="meta">
+          <span class="badge badge--normal"><span class="badge__dot">◆</span> 난이도 보통</span>
+          <span class="badge"><span class="badge__dot">⏱</span> 60s</span>
+        </div>
+      </div>
+    </a>
+
+  </main>
+
+  <footer class="footer">
+    © 2025 야옹게임천국 · 최적 해상도 16:9 · 사운드 On 권장
+  </footer>
+
+  <script>
+    // 카드 호버 시 mp4 자동 재생 (정책상 muted/playsinline 필요)
+    const cards = document.querySelectorAll('.card');
+
+    cards.forEach(card=>{
+      const video = card.querySelector('video.preview');
+      if(!video) return;
+
+      // 데스크탑 호버
+      card.addEventListener('mouseenter', ()=>{
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        video.currentTime = 0;
+        video.play().catch(()=>{ /* autoplay 정책 무시 실패시 조용히 */ });
+      });
+      card.addEventListener('mouseleave', ()=> video.pause());
+
+      // 모바일/터치: 탭 → 3초만 재생
+      let tapTimer=null;
+      card.addEventListener('touchstart', ()=>{
+        if (tapTimer) clearTimeout(tapTimer);
+        video.currentTime = 0;
+        video.play().catch(()=>{});
+        tapTimer = setTimeout(()=>video.pause(), 3000);
+      }, {passive:true});
+    });
+  </script>
+</body>
+</html>

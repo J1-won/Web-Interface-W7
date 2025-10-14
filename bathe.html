@@ -46,17 +46,14 @@
     }
     #rulePopup button:hover{background:black;color:white;}
 
-    /* 스테이지 */
     #bathStage{position:relative;width:100%;height:70vh;max-height:720px;margin:0 auto;z-index:10;}
     .clickable{position:absolute;cursor:pointer;image-rendering:pixelated;user-select:none;}
 
-    /* 좌상단: 단계 패널 */
     #stepsPanel{
       position:fixed;top:50px;left:50px;z-index:900;
       font-family:'DosSammul',monospace;font-size:0.65rem;color:#222;image-rendering:pixelated;
     }
 
-    /* 좌상단: 손 추적 미리보기(패널 오른쪽) */
     #camBox{
       position:fixed;top:50px;left:300px;z-index:901;
       width:220px;padding:8px;background:rgba(255,255,255,.88);
@@ -66,14 +63,12 @@
     #camBox canvas{display:block;width:200px;height:150px;margin:0 auto;}
     #camBox .cap{margin-top:6px;text-align:center;}
 
-    /* 우상단: 타이머 */
     #bathTimer{
       position:fixed;top:40px;right:40px;z-index:1002;
       font-family:"Jersey 10",sans-serif;font-size:2rem;
       text-shadow:3px 3px 0 white,-3px -3px 0 white,3px -3px 0 white,-3px 3px 0 white;
     }
 
-    /* 고양이 머리 눌림 애니메이션 */
     #catFace{ transform-origin:50% 20%; }
     @keyframes petPress {
       0%   { transform: translate(-50%, -50%) scaleY(1) translateY(0); }
@@ -103,13 +98,11 @@
     let bubbleLayer=null;
     let steps=[], activeStepIndex=0;
 
-    // 손 인식/거품
     const MOTION_TH = 2;
     let motionActive = false;
     let lastBubbleAt = 0;
     const BUBBLE_COOLDOWN = 70;
 
-    // 진행도
     const WASH_CFG={
       soap:{goal:15000,gain:0.6},
       shampoo_g:{goal:11000,gain:0.65},
@@ -119,10 +112,8 @@
     };
     let washing={active:false, tool:null, progress:0, goal:0, gain:0.5};
 
-    // 타이머(15초)
     let bathTimerEl=null, bathTimeLeft=40, bathTimerId=null;
 
-    // 손 추적 표시 (영상 숨김)
     let camBox=null, camPrev=null, camViz=null, vizCtx=null, energyText=null;
     let energyEMA = 0, lastPalmX=null, lastT=null;
 
@@ -159,36 +150,27 @@
        시작 플로우
     ========================= */
     function startBathFlow(){
-      // 팝업 닫기
       document.getElementById("overlay").style.display="none";
       document.getElementById("rulePopup").style.display="none";
 
-      // 타이틀 정리
       const title=document.getElementById("title");
       if(title){ title.style.fontSize="2rem"; title.style.transform="translateY(-50px)"; }
       const subtitle=document.querySelector("h3");
       if(subtitle) subtitle.style.display="none";
 
-      // 시작 고양이 숨김
       const startCat=document.getElementById("startCat");
       if(startCat) startCat.style.display="none";
 
-      // 스테이지 구성
       buildStage();
 
       resetCaptureState();
 
-      // 손 추적 시작
       setupMotionCapture();
 
-      // 타이머 표시 & 시작
       ensureTimer();
       startBathTimer(40);
     }
 
-    /* =========================
-       타이머
-    ========================= */
     function ensureTimer(){
       if (!bathTimerEl){
         bathTimerEl = document.createElement('div');
@@ -202,14 +184,13 @@
   bathTimeLeft = sec;
   updateBathTimer();
   bathTimerId = setInterval(()=>{
-    // 이미 게임 종료면 타이머 정지
     if (!gameActive) { clearBathTimer(); return; }
 
     bathTimeLeft--;
     updateBathTimer();
     if (bathTimeLeft <= 0){
       clearBathTimer();
-      endGameOver(false); // ← 여기!
+      endGameOver(false);
     }
   }, 1000);
 }
@@ -235,15 +216,13 @@
       stage.innerHTML="";
       Object.assign(stage.style,{position:"relative",width:"100%",height:"70vh",maxHeight:"720px",margin:"0 auto",overflow:"visible"});
 
-      // 버블 레이어
       bubbleLayer=document.createElement("div");
       bubbleLayer.id="bubbleLayer";
       Object.assign(bubbleLayer.style,{position:"absolute",inset:"0",pointerEvents:"none"});
       stage.appendChild(bubbleLayer);
 
-      // 오브젝트 (고양이는 클릭 불가)
-      addObj("tub","bathtub.png",49,35,40,true);          // 물 역할: tub → water
-      addObj("catFace","eyesopened.png",49,37,14,false);   // 클릭 불가
+      addObj("tub","bathtub.png",49,35,40,true);
+      addObj("catFace","eyesopened.png",49,37,14,false);
       addObj("soap","soap.png",16,50,16,true);
       addObj("yShampoo","y_shampoo.png",83,10,8,true);
       addObj("gShampoo","g_shampoo.png",76,10,8.1,true);
@@ -253,7 +232,7 @@
         el.addEventListener("click", onPick);
       });
 
-      buildStepsPanel(); // ← 여기서 랜덤 5 + 마지막 water 로 6단계 구성
+      buildStepsPanel();
     }
 
     function addObj(id, src, leftVW, topVH, widthVW, clickable){
@@ -269,15 +248,11 @@
       stage.appendChild(img);
     }
 
-    /* =========================
-       도구 선택/드롭
-    ========================= */
     function onPick(e){
-      const id=e.currentTarget.id;          // soap / yShampoo / gShampoo / towel / tub
-      const mapped=mapTool(id);             // soap / shampoo_g / shampoo_y / towel / water
+      const id=e.currentTarget.id;
+      const mapped=mapTool(id); 
       currentTool=mapped;
 
-      // 커서 고스트
       if(!ghostImg){
         ghostImg=document.createElement("img");
         ghostImg.id="cursorGhost";
@@ -321,7 +296,7 @@
       if(id==="tub") return "water";
       if(id==="gShampoo") return "shampoo_g";
       if(id==="yShampoo") return "shampoo_y";
-      return id; // soap / towel
+      return id;
     }
     function shakeCat(){
       const cat=document.getElementById("catFace");
@@ -331,11 +306,8 @@
       setTimeout(()=>{ cat.style.transform="translate(-50%,-50%)"; cat.style.transition=""; },160);
     }
 
-    /* =========================
-       단계 패널: 5개 랜덤(물 포함) + 맨 마지막 물 추가 = 총 6개
-    ========================= */
+
     function buildStepsPanel(){
-      // 기본 5개(물 포함)
       const base = [
         { id:"soap",      icon:"soap.png",       label:"soap" },
         { id:"shampoo_g", icon:"g_shampoo.png",  label:"shampoo" },
@@ -343,17 +315,14 @@
         { id:"shampoo_y", icon:"y_shampoo.png",  label:"body wash" },
         { id:"towel",     icon:"towel.png",      label:"towel" },
       ];
-      // 섞기
       for (let i=base.length-1; i>0; i--){
         const j = Math.floor(Math.random()*(i+1));
         [base[i], base[j]] = [base[j], base[i]];
       }
-      // 마지막에 'water'를 한 번 더 붙여서 총 6단계, 그리고 "항상" 마지막이 물
-      steps = base.slice();                 // 5개
-      steps.push({ id:"water", icon:"bathtub.png", label:"water" }); // 6번째 = water
+      steps = base.slice();
+      steps.push({ id:"water", icon:"bathtub.png", label:"water" });
       activeStepIndex = 0;
 
-      // 패널 DOM
       let panel=document.getElementById("stepsPanel");
       if(!panel){
         panel=document.createElement("div");
@@ -399,7 +368,6 @@
       });
       highlightStep(0);
 
-      // 손 추적 미리보기 박스(패널 옆)
       ensureCamBoxBesidePanel();
     }
 
@@ -417,14 +385,10 @@
       row.style.opacity="0.5";
       if(i+1<steps.length) highlightStep(i+1);
       if(i+1===steps.length){
-        // 모든 단계 완료 → 클리어
         setTimeout(()=>endGameClear(),300);
       }
     }
 
-    /* =========================
-       세정 세션 & 진행도
-    ========================= */
     function startWashing(toolId){
       const cfg=WASH_CFG[toolId]||{goal:150,gain:0.5};
       washing={active:true, tool:toolId, progress:0, goal:cfg.goal, gain:cfg.gain};
@@ -437,17 +401,14 @@
         const add = (energy - TH) * washing.gain;
         washing.progress += add;
 
-        // 거품(스로틀)
         const intensity = Math.min(16, 4 + (energy - TH)*0.22);
         spawnBubblesThrottled(intensity);
 
-        // 표정
         setCatMood(true);
       } else {
         setCatMood(false);
       }
 
-      // 패널 진행도
       const bar = document.getElementById(`bar-${activeStepIndex}`);
       if (bar){
         const pct = Math.min(100, Math.round((washing.progress/washing.goal)*100));
@@ -461,9 +422,6 @@
       }
     }
 
-    /* =========================
-       눈/끄덕 애니메이션 토글
-    ========================= */
     let eyesClosed=false;
     function setCatMood(closed){
       const cat=document.getElementById('catFace');
@@ -472,9 +430,6 @@
       if (!closed && eyesClosed){ cat.src='eyesopened.png';; eyesClosed=false; }
     }
 
-    /* =========================
-       거품
-    ========================= */
     function spawnBubblesThrottled(intensity){
       const now = performance.now();
       if (now - lastBubbleAt < BUBBLE_COOLDOWN) return;
@@ -510,9 +465,6 @@
       }
     }
 
-    /* =========================
-       끝내기(클리어/실패/메뉴)
-    ========================= */
     function endGameClear(){
       stopMotionCapture();
       clearBathTimer();
@@ -574,9 +526,6 @@
       if(startCat) startCat.style.display="inline";
     }
 
-    /* =========================
-       손 추적 미리보기 박스(패널 옆)
-    ========================= */
     function ensureCamBoxBesidePanel(){
       if (document.getElementById('camBox')) return;
       camBox=document.createElement('div'); camBox.id='camBox';
@@ -591,9 +540,6 @@
       document.body.appendChild(camBox);
     }
 
-    /* =========================
-       MediaPipe Hands (+ fallback)
-    ========================= */
     function loadScript(src){
       return new Promise((res,rej)=>{
         const s=document.createElement('script');
@@ -613,12 +559,10 @@
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js');
         await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
 
-        // eslint-disable-next-line no-undef
         mpHands=new Hands({ locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
         mpHands.setOptions({ maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
         mpHands.onResults(onHandsResults);
 
-        // eslint-disable-next-line no-undef
         mpCamera=new Camera(camPrev,{
           onFrame: async ()=>{ await mpHands.send({image:camPrev}); },
           width:320, height:240
@@ -639,29 +583,26 @@
       if(results.multiHandLandmarks && results.multiHandLandmarks.length>0){
         const lm = results.multiHandLandmarks[0];
 
-        // 손바닥 중심
         const palms=[0,5,9,13,17];
         let cx=0, cy=0; palms.forEach(i=>{ cx+=lm[i].x; cy+=lm[i].y; });
         cx/=palms.length; cy/=palms.length;
 
-        const px = (1-cx)*camViz.width;  // 좌우 반전
+        const px = (1-cx)*camViz.width;
         const py = cy*camViz.height;
 
-        // 손가락(초록)
         for(let i=0;i<lm.length;i++){
           const x=(1-lm[i].x)*camViz.width, y=lm[i].y*camViz.height;
           vizCtx.beginPath(); vizCtx.arc(x,y,2.5,0,Math.PI*2);
           vizCtx.fillStyle='#00e0a8'; vizCtx.fill();
         }
-        // 손바닥(파랑)
+
         vizCtx.beginPath(); vizCtx.arc(px,py,12,0,Math.PI*2);
         vizCtx.fillStyle='rgba(127,209,255,0.6)'; vizCtx.fill();
         vizCtx.strokeStyle='#003'; vizCtx.lineWidth=2; vizCtx.stroke();
 
-        // 속도 → 에너지(EMA)
         if(lastPalmX!=null && lastT!=null){
           const dt = Math.max(16, now - lastT);
-          const vx = Math.abs(px - lastPalmX) / dt; // px/ms
+          const vx = Math.abs(px - lastPalmX) / dt;
           const raw = vx * 2600;
           const riseAlpha = 0.25, decayRate = 0.86;
           energyEMA = Math.max(raw, energyEMA*decayRate);
@@ -672,7 +613,6 @@
 
         tickWashing(energyOut);
       } else {
-        // 손 없음
         energyEMA *= 0.4;
         lastPalmX = null; lastT = null;
         lastBubbleAt = performance.now();
@@ -680,7 +620,6 @@
       }
     }
 
-    /* ===== Fallback: 차영상 ===== */
     let motionRAF=null, videoEl=null, cvsA=null, ctxA=null, cvsB=null, ctxB=null, lastFrameIsA=true;
     async function setupMotionCaptureFallback(){
       ensureCamBoxBesidePanel();
@@ -739,7 +678,6 @@
       loop();
     }
 
-    /* ===== 종료/정리 ===== */
     function stopMotionCapture(){
       if(mpCamera && mpCamera.stop) mpCamera.stop();
       mpCamera=null;
@@ -749,9 +687,6 @@
       if(camPrev && camPrev.srcObject){ camPrev.srcObject.getTracks().forEach(t=>t.stop()); camPrev.srcObject=null; }
     }
 
-    /* =========================
-       초기 바인딩
-    ========================= */
     window.addEventListener("DOMContentLoaded",()=>{
       renderRules();
       const sc=document.getElementById("startCat");
