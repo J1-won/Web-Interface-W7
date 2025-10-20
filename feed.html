@@ -71,7 +71,7 @@
 		}
 		#gameUI {display:none;}
 	    #timer {
-	      position:absolute;top:40px;right:40px;z-index: 9999;
+	      position:absolute;top:40px;right:40px;z-index: 99;
 	      font-family:"Jersey 10",sans-serif;font-size:2rem;
 	      text-shadow:3px 3px 0 white,-3px -3px 0 white,3px -3px 0 white,-3px 3px 0 white;
 	    }
@@ -92,7 +92,7 @@
 		야옹이의 밥시간이에요!
 	</h3>
 	<div style="text-align: center;">
-		<img src="standingcat2.jpg" id="startCat" style="width: 500px;bottom:180px;cursor: pointer;padding-top:30px" onclick="showRules()">
+		<img src="standingcat2.jpg" id="startCat" style="width: 500px;bottom:180px;cursor: pointer;padding-top:40px" onclick="showRules()">
 	</div>
 	<div id="overlay"></div>
 	<div id="rulePopup">
@@ -114,10 +114,11 @@
 	</div>
 
 	<script>
-		let time = 30, timerInterval, spawnInterval, score = 0, lives = 3;
+        let time = 30, timerInterval, spawnInterval, score = 0, lives = 3;
 		const fishList = ["fish_o.png","fish_w.png","fish_g.png"];
 		const obstacleList = ["bottle.png","obstacle.png","rock.png","trash.png","headphone.png","clock.png","chair.png","plastic.png"];
-		let gameActive = false;
+        let gameActive = false;
+        let isPaused = false; // 팝업 동안 일시정지 상태
 		let isJumping = false;
 	  
 		// 좌우 50px 가드라인
@@ -239,7 +240,7 @@
 		  }, 16);
 		}
 	  
-		function spawnItem(){
+        function spawnItem(){
 		  if (!gameActive) return;
 		  const item = document.createElement("img");
 		  const isFish = Math.random() < 0.5;
@@ -250,12 +251,15 @@
 		  document.body.appendChild(item);
 	  
 		  const fallSpeed = Math.random() * 5 + 5; // 5~10
-		  const fall = setInterval(()=>{
-			if (!gameActive){ item.remove(); clearInterval(fall); return; }
+          const fall = setInterval(()=>{
+            // 게임 종료 시에는 인터벌 종료 및 요소 제거
+            if (!gameActive){ item.remove(); clearInterval(fall); return; }
+            // 일시정지 중에는 이동만 멈춤
+            if (isPaused) { return; }
 			item.style.top = (item.offsetTop + fallSpeed) + "px";
 			if (checkCollision(item)){
 			  if (isFish) { score += 10; }
-			  else { loseHeart(); }
+              else { loseHeart(item.src || ""); }
 			  item.remove(); clearInterval(fall);
 			}
 			if (item.offsetTop > window.innerHeight){
@@ -270,12 +274,71 @@
 		  return !(cat.right < obj.left || cat.left > obj.right || cat.bottom < obj.top || cat.top > obj.bottom);
 		}
 	  
-		function loseHeart(){
+        function loseHeart(itemSrc){
 		  const hearts = document.querySelectorAll("#hearts img");
 		  if (hearts[lives-1]) hearts[lives-1].remove();
 		  lives--;
-		  if (lives <= 0) endGame();
+          if (lives <= 0) { endGame(); return; }
+          showTrashPopup(itemSrc);
 		}
+
+        function pauseGame(){
+          if (!gameActive) return;
+          if (isPaused) return;
+          isPaused = true;
+          if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+          if (spawnInterval) { clearInterval(spawnInterval); spawnInterval = null; }
+        }
+
+        function resumeGame(){
+          if (!gameActive) return; // 게임이 종료된 경우는 재개하지 않음
+          if (!isPaused) return;
+          isPaused = false;
+          // 재개: 타이머 재가동
+          document.getElementById("timer").innerText = "TIME " + (time < 10 ? "0"+time : time);
+          timerInterval = setInterval(() => {
+            if (isPaused) return; // 혹시 중간에 다시 일시정지되면 카운트 중단
+            time--;
+            document.getElementById("timer").innerText = "TIME " + (time < 10 ? "0"+time : time);
+            if (time <= 0) endGame();
+          }, 1000);
+          // 아이템 스폰 재개
+          spawnInterval = setInterval(spawnItem, 1000);
+        }
+
+        function getTrashNameFromSrc(src){
+          try {
+            const file = src.split('/').pop();
+            if (file === 'headphone.png') return '헤드셋을';
+            if (file === 'plastic.png') return '비닐봉지를';
+            if (file === 'bottle.png') return '페트병을';
+            if (file === 'rock.png') return '돌을';
+            if (file === 'obstacle.png') return '장애물을';
+            if (file === 'clock.png') return '시계를';
+            if (file === 'chair.png') return '의자를';
+            if (file === 'trash.png') return '쓰레기통을';
+          } catch(e) {}
+          return '쓰레기';
+        }
+
+        function showTrashPopup(itemSrc){
+          pauseGame();
+          const name = getTrashNameFromSrc(itemSrc);
+          document.getElementById("overlay").style.display = "block";
+          const popup = document.getElementById("rulePopup");
+          popup.style.display = "block";
+          popup.innerHTML = `
+            <h2>아이코!</h2>
+            <p style="font-size:0.9rem;text-align:center;">인간이 버린 ${name} 먹어버렸어요!<br>야옹이가 쓰레기를 먹으면 아프니 주의해주세요.</p>
+            <button onclick="closeTrashPopup()">&gt; 계속하기 &lt;</button>
+          `;
+        }
+
+        function closeTrashPopup(){
+          document.getElementById("overlay").style.display = "none";
+          document.getElementById("rulePopup").style.display = "none";
+          resumeGame();
+        }
 	  
 		function endGame(){
 		  gameActive = false;
@@ -289,8 +352,8 @@
 		  popup.style.display = "block";
 	  
 		  const resultHtml = (score >= 100 && lives > 0)
-			? `<h2>GAME CLEAR!</h2><p style="font-size:1.2rem;text-align:center;">내 점수: ${score}점</p>`
-			: `<h2>GAME OVER :(</h2><p style="font-size:1.2rem;text-align:center;">내 점수: ${score}점</p>`;
+			? `<h2>GAME CLEAR!</h2><p style="font-size:0.9rem;text-align:center;">내 점수: ${score}점<br> 앞으로도 야옹이가 인간이 버린 쓰레기를 <br>먹지 않도록 분리수거를 잘 해주세요!</p>`
+			: `<h2>GAME OVER :(</h2><p style="font-size:0.9rem;text-align:center;">내 점수: ${score}점<br> 인간이 마구잡이로 버린 쓰레기 때문에 <br>야옹이가 아파요. 환경을 지켜주세요!</p>`;
 	  
 		  popup.innerHTML = `
 			${resultHtml}

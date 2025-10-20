@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jumping Cat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'DosSammul';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/DOSSaemmul.woff') format('woff');
+    font-weight: normal; font-display: swap;
+  }
+  html { font-size: 2rem; scroll-behavior: smooth; }
+  body, h1, h2, h3, p, ul { margin:0; padding:0; }
+  body.bg {
+    background: url('universe.jpg') center top no-repeat;
+    background-size: cover;
+    /* JS에서 backgroundPositionY를 계속 업데이트해 “올라가는” 느낌 */
+  }
+  h1{
+    font-family:"Jersey 10",sans-serif;font-weight:400;font-size:4rem;text-align:center;
+    padding:200px 0 20px 0;
+    text-shadow:7px 7px 0 white,-7px -7px 0 white,7px -7px 0 white,-7px 7px 0 white;
+    filter:drop-shadow(5px 5px 0 #73564b);
+    z-index:2; position:relative;
+  }
+  h3{
+    font-family:'DosSammul',sans-serif;font-weight:400;font-size:1rem;text-align:center;
+    padding-bottom:70px;
+    text-shadow:2px 2px 0 white,-2px -2px 0 white,2px -2px 0 white,-2px 2px 0 white;
+    filter:drop-shadow(2px 2px 0 #73564b); z-index:2; position:relative;
+  }
+
+  #overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9;
+  }
+  #rulePopup{
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:620px; background:#fff; border:5px solid #000; box-shadow:6px 6px 0 #333;
+    padding:50px 30px; font-family:'DosSammul'; line-height:1.3rem;
+    font-size:0.7rem; color:#111; z-index:10;
+  }
+  #rulePopup h2{ text-align:center; margin-bottom:40px; font-size:1.6rem; }
+  #rulePopup ul{ text-align:left; padding-left:20px; }
+  #rulePopup button{
+    display:block; margin:40px auto 0 auto; padding:15px 15px; border:3px solid #000; background:#fff;
+    font-family:'DosSammul'; font-size:0.5rem; cursor:pointer; filter:drop-shadow(3px 3px 0 #555);
+  }
+  #rulePopup button:hover{ background:#000; color:#fff; }
+
+  /* 상단 UI */
+  #timer{
+    position:fixed; top:40px; right:40px; z-index:8;
+    font-family:"Jersey 10",sans-serif; font-size:2rem;
+    text-shadow:3px 3px 0 white,-3px -3px 0 white,3px -3px 0 white,-3px 3px 0 white;
+  }
+  #hearts{
+    position:fixed; top:50px; left:40px; z-index:8;
+  }
+  #hearts img{ width:60px; margin-right:5px; image-rendering:pixelated; }
+
+  /* 게임 스테이지 */
+  #stage{
+    position:relative; width:100%; height:100vh; overflow:hidden; z-index:1;
+  }
+  .cloud{
+    position:absolute; image-rendering:pixelated; user-select:none; pointer-events:none;
+    transform:translate(-50%,-50%);
+  }
+  #cat{
+    position:absolute; width:150px; transform:translate(-50%,-50%); image-rendering:pixelated;
+  }
+  #goalX{
+    position:absolute; width:100px; transform:translate(-50%,-50%); image-rendering:pixelated;
+  }
+
+  /* 디버그(제스처 미리보기) - 필요시 */
+  #camBox{
+    position:fixed; top:50px; left:50%; transform:translateX(-50%);
+    width:240px; padding:8px; background:rgba(255,255,255,.9);
+    border:3px solid #333; box-shadow:4px 4px 0 #666;
+    font-family:'DosSammul'; font-size:12px; image-rendering:pixelated; z-index:8;
+    display:none; /* 필요하면 block으로 바꿔서 보면서 튜닝 */
+  }
+  #camBox canvas{ display:block; width:220px; height:160px; margin:0 auto; }
+  #camBox .cap{ text-align:center; margin-top:4px; }
+</style>
+</head>
+<body class="bg">
+  <h1>Jumping Cat!</h1>
+  <h3>야옹이와 함께 높이 올라가볼까요?</h3>
+
+  <div style="text-align:center;">
+    <img src="unicat.png" id="startThumb" style="width:420px; cursor:pointer; padding-top:100px" />
+  </div>
+
+  <div id="overlay"></div>
+  <div id="rulePopup"></div>
+
+  <div id="timer" style="display:none;">TIME 40</div>
+  <div id="hearts" style="display:none;">
+    <img src="heart.png"><img src="heart.png"><img src="heart.png">
+  </div>
+
+  <div id="stage" style="display:none;"></div>
+
+  <!-- (선택) 캠 디버그 -->
+  <div id="camBox">
+    <canvas id="camViz" width="220" height="160"></canvas>
+    <div class="cap" id="gestureText">tilt / nod</div>
+  </div>
+
+  <script>
+    /* ========= 전역 ========= */
+    let gameActive = false;
+    let timerId = null, timeLeft = 40;
+    let lives = 3;
+    let stage, catEl, goalEl;
+    let scrollY = 0;                // 월드 Y (위로 갈수록 +)
+    let targetHeight = 6000;
+    let clouds = [];
+    let spawnY = 200;
+    const CLOUD_SPAWN_GAP = 220;
+    const MAX_LIVES = 3;
+    
+    // 배경 이미지의 실제 표시 높이(가로 100% 맞춤 시)
+    let bgDisplayHeight = 3000;
+    
+    function computeBgDisplayHeight(naturalW, naturalH){
+      const vw = window.innerWidth;
+      return naturalH * (vw / naturalW);
+    }
+    
+    /* ===== 제스처 옵션 (이전 값 유지) ===== */
+    const MIRROR_INPUT = true;
+    const EMA_A   = 0.12;
+    const GESTURE_COOLDOWN = 600;
+    const NEUTRAL_TILT = 6;
+    const NEUTRAL_NOD  = 6;
+    
+    let rollEMA = 0, pitchEMA = 0;
+    let tiltReady = true, nodReady = true;
+    
+    const cloudImgs = Array.from({length:9},(_,i)=>`c${i+1}.png`);
+    const GOLD_IMG = 'gc.png';
+    const CAT_IMG  = 'backcat.png';
+    const GOAL_IMG = 'x.png';
+    
+    /* ========= 룰 팝업 ========= */
+    function renderRules(){
+      const popup = document.getElementById('rulePopup');
+      popup.innerHTML = `
+        <h2>!Rule!</h2>
+        <ul>
+      <li>목표: 꼭대기의 X까지 도달!</li>
+      <li>머리를 왼쪽/오른쪽으로 기울이면 그 방향으로 점프한다.</li>
+      <li>키보드 방향키(←, ↑, →)로도 조작 가능!</li>
+      <li>황금 구름은 착지 시 하트가 하나 살아남!</li>
+      <li>우측 상단 타이머가 끝나기 전까지 X를 찾으면 성공~</li>
+    </ul>
+    <button onclick="startGame()">&gt; 게임 시작하기 &lt;</button>
+      `;
+    }
+    function showRules(){
+      renderRules();
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('rulePopup').style.display = 'block';
+    }
+    document.getElementById('startThumb').addEventListener('click', showRules);
+    
+    /* ========= 시작 ========= */
+    function startGame(){
+      gameActive = true;
+    
+      // 배경 기본 스타일 (bottom anchor)
+      document.body.classList.remove('bg');
+      document.body.style.backgroundImage  = "url('sky.jpg')";
+      document.body.style.backgroundSize   = '100% auto';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundPosition = 'center bottom';
+      document.body.style.backgroundColor  = '#03040a'; // 흰 띠 방지 백업색
+    
+      // UI 전환
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('rulePopup').style.display = 'none';
+      document.getElementById('timer').style.display = 'block';
+      document.getElementById('hearts').style.display = 'block';
+      document.getElementById('stage').style.display  = 'block';
+    
+      // 타이틀: 글자만 보이게, 클릭 막힘, 스테이지보다 위
+const h1 = document.querySelector('h1');
+h1.style.position = 'fixed';
+h1.style.top = '-50px';
+h1.style.left = '50%';
+h1.style.transform = 'translateX(-50%)';   // Y로 밀던 건 제거
+h1.style.fontSize = '2rem';
+h1.style.zIndex = '5';                      // stage(3)보다 크면 됨
+h1.style.pointerEvents = 'none';            // 클릭/충돌 안 잡음
+      const sub = document.querySelector('h3'); if (sub) sub.style.display = 'none';
+      document.getElementById('startThumb').style.display = 'none';
+    
+      // 스테이지가 h1보다 위에 오도록
+      stage = document.getElementById('stage');
+      stage.style.zIndex = '3';
+    
+      // 초기화
+      lives = 3; timeLeft = 40; scrollY = 0;
+      document.getElementById('hearts').innerHTML = '<img src="heart.png"><img src="heart.png"><img src="heart.png">';
+      stage.innerHTML = ''; delete stage.dataset.cloudsBuilt;
+    
+      // 고양이
+      catEl = document.createElement('img');
+      catEl.id = 'cat';
+      catEl.src = CAT_IMG;
+      catEl.style.transform = 'translate(-50%,-50%) scaleX(1)';
+      stage.appendChild(catEl);
+    
+      // 목표물
+      goalEl = document.createElement('img');
+      goalEl.id = 'goalX';
+      goalEl.src = GOAL_IMG;
+      stage.appendChild(goalEl);
+    
+      // sky.jpg 로드 후 월드 세팅
+      const sky = new Image();
+      sky.src = 'sky.jpg';
+      sky.onload = ()=>{
+        bgDisplayHeight = computeBgDisplayHeight(sky.naturalWidth, sky.naturalHeight);
+        targetHeight = Math.max(window.innerHeight + 800, bgDisplayHeight);
+    
+        // 구름 생성
+        clouds = [];
+        for(let y=spawnY; y<=targetHeight-120; y += CLOUD_SPAWN_GAP){
+          spawnCloudRow(y);
+        }
+    
+        // 목표 X (꼭대기 근처)
+        goalEl.dataset.wx = (Math.random()*0.5 + 0.25) * window.innerWidth;
+        goalEl.dataset.wy = targetHeight - 80;
+    
+        // 시작: 가장 낮은 구름 위에서, 하트 깎이지 않도록 확실하게 착지 상태로 시작
+        const startCloud = clouds.reduce((best, c) => (!best || c.y < best.y) ? c : best, null);
+        if (startCloud){
+          catWorldX = (startCloud.wx ?? startCloud.x);
+          catWorldY = startCloud.y + 60;
+          catVX = 0; catVY = 0; onAir = false;
+          attachedCloud = startCloud;            // 착지 구름 “붙이기”
+          attachOffsetX = catWorldX - (startCloud.wx ?? startCloud.x);
+          // 카메라(스크롤)도 고양이 기준으로 시작
+          scrollY = Math.max(0, catWorldY - window.innerHeight * 0.45);
+          updateBackground(); // 최초 1회 보정
+        } else {
+          // fallback
+          catWorldX = window.innerWidth * 0.5;
+          catWorldY = 120;
+          catVX=0; catVY=0; onAir=false;
+          updateBackground();
+        }
+    
+        // 제스처/키/타이머 시작
+        setupFaceGestures();
+        window.addEventListener('keydown', onKey);
+    
+        updateTimer();
+        timerId = setInterval(()=>{
+          if(!gameActive) { clearInterval(timerId); return; }
+          timeLeft--;
+          updateTimer();
+          if (timeLeft <= 0) { endGame(false, '시간 초과'); }
+        }, 1000);
+    
+        requestAnimationFrame(gameLoop);
+      };
+    }
+    
+    /* ========= 구름 스폰 ========= */
+    function rnd(min,max){ return min + Math.random()*(max-min); }
+    function spawnCloudRow(y){
+      // 더 크게 흔들리도록 상향
+      const wobbleAmp = Math.min(140, 25 + y/5);        // 진폭 ↑
+      const wobbleSpdBase = rnd(0.6, 1.2);              // 속도 ↑
+      const count = 1 + Math.floor(Math.random()*3);    // 1~2
+      const margin = 240;
+      const minGap = 180;
+      const pickedX = [];
+    
+      for (let i=0; i<count; i++){
+        let tries=0, x=null;
+        while (tries++ < 20){
+          const cand = rnd(margin, window.innerWidth - margin);
+          if (pickedX.every(px => Math.abs(px - cand) >= minGap)) { x=cand; break; }
+        }
+        if (x==null) continue;
+        pickedX.push(x);
+    
+        const img = Math.random()<0.05 ? GOLD_IMG : cloudImgs[Math.floor(Math.random()*cloudImgs.length)];
+        clouds.push({
+          x, y, img,
+          gold: (img===GOLD_IMG),
+          amp: wobbleAmp * Math.random(),
+          phase: Math.random()*Math.PI*2,
+          speed: wobbleSpdBase * (0.7 + Math.random()*0.8)
+        });
+      }
+    }
+    
+    /* ========= 물리/렌더 ========= */
+    let catWorldX=0, catWorldY=0, catVX=0, catVY=0, onAir=true;
+    const GRAV = -0.0007;
+    const JUMP_DX = 220;   // “한 칸” 좌우 이동량
+    const JUMP_DY = 250;   // “한 칸” 위로 이동량
+    let attachedCloud = null;      // 현재 서있는 구름
+    let attachOffsetX = 0;
+    
+    function worldToScreenY(wy){ return window.innerHeight - (wy - scrollY); }
+    function updateTimer(){ document.getElementById('timer').textContent = 'TIME ' + (timeLeft<10?('0'+timeLeft):timeLeft); }
+    
+    function updateBackground(){
+  // 바닥(0) → 꼭대기(1)
+  const scrollRange = Math.max(1, targetHeight - window.innerHeight);
+  const progress    = Math.min(1, Math.max(0, scrollY / scrollRange));
+
+  // sky.jpg가 화면보다 클 때 초과 높이
+  const maxBgOffset = Math.max(0, bgDisplayHeight - window.innerHeight);
+
+  // 시작(progress=0): -maxBgOffset → 이미지의 "맨 아래"가 보임
+  // 끝(progress=1): 0 → 이미지의 "맨 위"가 보임
+  const bgTopPx = -Math.round(maxBgOffset * (1 - progress));
+  document.body.style.backgroundPosition = `center ${bgTopPx}px`;
+}
+    
+    function gameLoop(){
+      if(!gameActive) return;
+    
+      // 구름 흔들림(좌우)
+      const t = performance.now()/1000;
+      clouds.forEach(c=>{
+        c.wx = c.x + Math.sin(t*c.speed + c.phase)*c.amp;
+      });
+    
+      // 착지 상태면, 발판 구름과 함께 X 좌표를 동기화
+      if (!onAir && attachedCloud){
+        const cx = attachedCloud.wx ?? attachedCloud.x;
+        catWorldX = cx + attachOffsetX;
+      }
+    
+      // 중력/이동
+      catVY += GRAV * 16;
+      catWorldY += catVY * 16;
+      catWorldX += catVX * 16;
+      catVX *= 0.94;
+    
+      // 착지 체크
+      const footY = catWorldY - 50;
+      let landed = false;
+      for(const c of clouds){
+        const cy = c.y;
+        const cx = c.wx ?? c.x;
+        const w = 180, h = 50;
+        const withinX = Math.abs(catWorldX - cx) < w*0.45;
+        const nearY   = (footY <= cy + h*0.25) && (footY >= cy - h*0.25) && (catVY<0);
+        if (withinX && nearY){
+          catWorldY = cy + 60;
+          catVY = 0;
+          if (onAir){ tiltReady = true; nodReady = true; }
+          onAir = false; landed = true;
+    
+          // 운반 플랫폼 세팅
+          attachedCloud = c;
+          attachOffsetX = catWorldX - (c.wx ?? c.x);
+    
+          if (c.gold && lives < MAX_LIVES){
+            lives++;
+            document.getElementById('hearts').innerHTML = '<img src="heart.png">'.repeat(lives);
+          }
+          break;
+        }
+      }
+      if (!landed){
+        onAir = true;
+        attachedCloud = null; // 공중이면 붙임 해제
+      }
+    
+      // 화면 아래로 추락
+      if (worldToScreenY(catWorldY) > window.innerHeight + 120){
+        loseLife(); if(!gameActive) return;
+        const safe = findNearestBelowCloud(catWorldX, scrollY+200);
+        catWorldX = (safe?.x || window.innerWidth*0.5);
+        catWorldY = (safe?.y || scrollY+300) + 120;
+        catVY=0; onAir=false; tiltReady = true; nodReady = true;
+        attachedCloud = safe || null;
+        attachOffsetX = attachedCloud ? (catWorldX - (attachedCloud.wx ?? attachedCloud.x)) : 0;
+      }
+    
+      // 카메라(스크롤) — 고양이 중심
+      const targetScroll = Math.max(0, catWorldY - window.innerHeight*0.45);
+      scrollY += (targetScroll - scrollY) * 0.12;
+    
+      // 배경 위치 업데이트 (항상 아래로 흐르도록)
+      updateBackground();
+    
+      // 렌더
+      catEl.style.left = catWorldX + 'px';
+      catEl.style.top  = worldToScreenY(catWorldY) + 'px';
+    
+      renderClouds();
+      const gx = parseFloat(goalEl.dataset.wx), gy = parseFloat(goalEl.dataset.wy);
+      goalEl.style.left = gx + 'px';
+      goalEl.style.top  = worldToScreenY(gy) + 'px';
+    
+      // 목표 도달
+      const dx = Math.abs(catWorldX - gx);
+      const dy = Math.abs(catWorldY - gy);
+      if (dx < 70 && dy < 70){ endGame(true, '오존층 회복 물건(X)에 도달!'); return; }
+    
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function renderClouds(){
+      if (!stage.dataset.cloudsBuilt){
+        clouds.forEach((c,idx)=>{
+          const el = document.createElement('img');
+          el.className = 'cloud';
+          el.src = c.img;
+          el.style.width = c.gold ? '200px' : '240px';
+          el.dataset.index = idx;
+          stage.appendChild(el);
+          c.el = el;
+        });
+        stage.dataset.cloudsBuilt = '1';
+      }
+      clouds.forEach(c=>{
+        const el = c.el;
+        const x = c.wx ?? c.x;
+        el.style.left = x + 'px';
+        el.style.top  = worldToScreenY(c.y) + 'px';
+      });
+    }
+    
+    /* ========= 점프 로직: “한 칸” 고정 이동 ========= */
+    function jump(dir){
+      if (!gameActive || onAir) return;
+    
+      // 얼굴 방향 스프라이트 반전
+      if (dir === 'left')  { catEl.style.transform = 'translate(-50%,-50%) scaleX(-1)'; }
+      if (dir === 'right') { catEl.style.transform = 'translate(-50%,-50%) scaleX(1)'; }
+    
+      const targetX = catWorldX + (dir==='left'?-JUMP_DX: dir==='right'?JUMP_DX:0);
+      const targetY = catWorldY + JUMP_DY;
+      const t = 18; // 프레임 가정
+    
+      catVX = (targetX - catWorldX) / (t*16);
+      catVY = (targetY - catWorldY) / (t*16);
+      onAir = true;
+      attachedCloud = null; // 점프 시작 시 분리
+    }
+    
+    function findNearestBelowCloud(x, yTop){
+      let best=null, bestScore=1e9;
+      for(const c of clouds){
+        if (c.y < yTop) continue;
+        const dx = (c.wx??c.x) - x;
+        const dy = c.y - yTop;
+        const score = Math.abs(dx) + dy*0.5;
+        if (score < bestScore){ bestScore = score; best = c; }
+      }
+      return best;
+    }
+    
+    /* ========= 라이프/엔딩 ========= */
+    function loseLife(){
+      lives--;
+      document.getElementById('hearts').innerHTML = '<img src="heart.png">'.repeat(lives);
+      if (lives <= 0){ endGame(false, '추락으로 기절…'); }
+    }
+    
+    function endGame(success, reason){
+      gameActive = false;
+      if (timerId) { clearInterval(timerId); timerId=null; }
+      teardownFaceGestures();
+      window.removeEventListener('keydown', onKey);
+    
+      document.getElementById('overlay').style.display = 'block';
+      const p = document.getElementById('rulePopup');
+      p.style.display = 'block';
+    
+      const title = success ? 'GAME CLEAR!' : 'GAME OVER :(';
+      const msg = success
+       ? '고양이가 오존층을 지키는 물건에 도달했어요! 작은 습관이 구멍을 메웁니다.'
+       : `아쉬워요... ${reason || ''}<br>무리한 속도보다는 균형 잡힌 리듬이 하늘을 지켜요.`;
+    
+      p.innerHTML = `
+        <h2 style="text-align:center; font-size:1.6rem; margin-bottom:28px;">${title}</h2>
+        <p style="font-size:1.0rem; text-align:center;">${msg}</p>
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
+          <button style="margin:0;" onclick="backToMenu()">&gt; 메뉴로 이동 &lt;</button>
+          <button style="margin:0;" onclick="startGame()">&gt; 다시 하기 &lt;</button>
+        </div>
+      `;
+    }
+    
+    function backToMenu(){
+      gameActive = false;
+      if (timerId) { clearInterval(timerId); timerId=null; }
+      teardownFaceGestures();
+      window.removeEventListener('keydown', onKey);
+    
+      document.getElementById('overlay').style.display = 'none';
+      renderRules();
+      document.getElementById('rulePopup').style.display = 'none';
+    
+      document.getElementById('timer').style.display = 'none';
+      document.getElementById('hearts').style.display = 'none';
+      document.getElementById('stage').style.display = 'none';
+    
+      const h1 = document.querySelector('h1');
+      h1.style.fontSize = '4rem'; h1.style.transform = 'translateY(0)';
+      const h3 = document.querySelector('h3'); if (h3) h3.style.display = 'block';
+      const thumb = document.getElementById('startThumb'); thumb.style.display = 'inline';
+    }
+    
+    /* ========= 키보드 ========= */
+    function onKey(e){
+      if (!gameActive) return;
+      if (e.key === 'ArrowLeft'){ e.preventDefault(); jump('left'); }
+      if (e.key === 'ArrowRight'){ e.preventDefault(); jump('right'); }
+      if (e.key === 'ArrowUp'){ e.preventDefault(); jump('up'); }
+    }
+    
+    /* ========= 얼굴 제스처 ========= */
+    let camPrev=null, camViz=null, vizCtx=null;
+    let mpFace=null, mpCamera=null;
+    const TILT_TH = 20, NOD_TH = 10;
+    let lastGestureAt = 0;
+    
+    function setupFaceGestures(){
+      camViz = document.getElementById('camViz');
+      vizCtx = camViz.getContext('2d', { willReadFrequently:true });
+    
+      if (!camPrev){
+        camPrev = document.createElement('video');
+        Object.assign(camPrev, { autoplay:true, playsInline:true, muted:true });
+        camPrev.style.display = 'none';
+        document.body.appendChild(camPrev);
+      }
+      loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js')
+      .then(()=>loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'))
+      .then(()=>{
+        // eslint-disable-next-line no-undef
+        mpFace = new FaceMesh({ locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+        mpFace.setOptions({ maxNumFaces:1, refineLandmarks:false, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
+        mpFace.onResults(onFaceResults);
+    
+        // eslint-disable-next-line no-undef
+        mpCamera = new Camera(camPrev, {
+          onFrame: async ()=>{ await mpFace.send({image:camPrev}); },
+          width: 320, height: 240
+        });
+        mpCamera.start();
+      }).catch(err=>{ console.warn('FaceMesh 로드 실패:', err); });
+    }
+    
+    function teardownFaceGestures(){
+      try{ if (mpCamera && mpCamera.stop) mpCamera.stop(); }catch(e){}
+      mpCamera=null; mpFace=null;
+      if (camPrev && camPrev.srcObject){
+        camPrev.srcObject.getTracks().forEach(t=>t.stop());
+        camPrev.srcObject = null;
+      }
+    }
+    
+    function onFaceResults(res){
+      vizCtx.clearRect(0,0,camViz.width,camViz.height);
+      if (!(res.multiFaceLandmarks && res.multiFaceLandmarks.length) || !gameActive) return;
+    
+      const lm = res.multiFaceLandmarks[0];
+      const L = lm[33], R = lm[263], N = lm[1];
+    
+      const dx = (R.x - L.x), dy = (R.y - L.y);
+      const rollRaw  = Math.atan2(dy, dx) * 180/Math.PI;
+      const pitchRaw = (( (L.y + R.y)/2 ) - N.y) * 200;
+    
+      const rollFix = MIRROR_INPUT ? -rollRaw : rollRaw;
+    
+      rollEMA  = rollEMA  * (1-EMA_A) + rollFix  * EMA_A;
+      pitchEMA = pitchEMA * (1-EMA_A) + pitchRaw * EMA_A;
+    
+      const now = performance.now();
+      if (now - lastGestureAt < GESTURE_COOLDOWN) return;
+      if (onAir) return;
+    
+      if (tiltReady){
+        if (rollEMA >  TILT_TH){ jump('right'); tiltReady=false; lastGestureAt=now; return; }
+        if (rollEMA < -TILT_TH){ jump('left');  tiltReady=false; lastGestureAt=now; return; }
+      } else if (Math.abs(rollEMA) <= NEUTRAL_TILT){ tiltReady = true; }
+    
+      if (nodReady){
+        if (pitchEMA > NOD_TH){ jump('up'); nodReady=false; lastGestureAt=now; return; }
+      } else if (Math.abs(pitchEMA) <= NEUTRAL_NOD){ nodReady = true; }
+    }
+    
+    function loadScript(src){
+      return new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src=src; s.onload=()=>res(); s.onerror=rej; document.head.appendChild(s);
+      });
+    }
+    
+    // 초기 룰 준비
+    renderRules();
+    </script>
+</body>
+</html>
