@@ -489,12 +489,12 @@ h1.style.pointerEvents = 'none';            // 클릭/충돌 안 잡음
     
       const title = success ? 'GAME CLEAR!' : 'GAME OVER :(';
       const msg = success
-       ? '고양이가 오존층을 지키는 물건에 도달했어요! 작은 습관이 구멍을 메웁니다.'
-       : `아쉬워요... ${reason || ''}<br>무리한 속도보다는 균형 잡힌 리듬이 하늘을 지켜요.`;
+       ? '야옹이가 거쳐온 오존층을 지키기 위해 <br>다같이 노력해주세요!'
+       : `인간들이 파괴한 오존층을 지켜내지<br> 못하게 되었어요...`;
     
       p.innerHTML = `
         <h2 style="text-align:center; font-size:1.6rem; margin-bottom:28px;">${title}</h2>
-        <p style="font-size:1.0rem; text-align:center;">${msg}</p>
+        <p style="font-size:0.9rem; text-align:center;">${msg}</p>
         <div style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
           <button style="margin:0;" onclick="backToMenu()">&gt; 메뉴로 이동 &lt;</button>
           <button style="margin:0;" onclick="startGame()">&gt; 다시 하기 &lt;</button>
